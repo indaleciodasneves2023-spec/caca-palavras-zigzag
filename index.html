@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caça-Palavras em Zig-Zag</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: linear-gradient(to bottom, #3a1c71, #d76d77, #ffaf7b);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        h1 {
+            color: #3a1c71;
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+        }
+        .config-panel {
+            background-color: #f5f7ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        .config-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #3a1c71;
+        }
+        input, textarea {
+            padding: 10px;
+            border: 2px solid #8f94fb;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .game-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 25px;
+        }
+        .grid-container {
+            flex: 1;
+            min-width: 300px;
+        }
+        .words-container {
+            flex: 1;
+            min-width: 300px;
+        }
+        h2 {
+            color: #3a1c71;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #8f94fb;
+            text-align: center;
+        }
+        .grid {
+            display: grid;
+            gap: 1px;
+            margin: 0 auto;
+            justify-content: center;
+            position: relative;
+        }
+        .cell {
+            width: 28px;
+            height: 28px;
+            text-align: center;
+            line-height: 28px;
+            border: 1px solid #8f94fb;
+            background-color: #fff;
+            font-weight: bold;
+            font-size: 14px;
+            border-radius: 2px;
+            transition: all 0.2s;
+            position: relative;
+            z-index: 2;
+        }
+        .cell:hover {
+            background-color: #f0f0f0;
+            transform: scale(1.05);
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 12px 25px;
+            background: linear-gradient(to right, #3a1c71, #8f94fb);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .solution {
+            color: #000;
+            font-weight: bold;
+        }
+        .solutions-container {
+            display: none;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px dashed #3a1c71;
+        }
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+            color: #3a1c71;
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            color: white;
+            font-size: 0.9rem;
+        }
+        
+        /* Estilos para o efeito de marca-texto no gabarito */
+        .solution-path {
+            position: absolute;
+            z-index: 1;
+            border-radius: 3px;
+            pointer-events: none;
+        }
+        .solution-grid-container {
+            position: relative;
+        }
+        .highlight-toggle {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Novos estilos para o gabarito estilo PDF */
+        .solution-cell {
+            position: relative;
+            z-index: 2;
+        }
+        .solution-cell.highlighted {
+            color: #000 !important;
+            font-weight: bold;
+            z-index: 3;
+        }
+        
+        /* Estilos do banco de palavras na tela e impressão */
+        .simple-word-list {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            padding: 10px;
+            list-style-type: none;
+        }
+        .simple-word-item {
+            padding: 2px;
+            text-align: left;
+            font-weight: normal;
+            font-size: 0.9rem;
+            color: #3a1c71;
+        }
+        
+        /* Estilo para a observação do professor */
+        .teacher-note {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f5f7ff;
+            border-radius: 8px;
+            font-style: italic;
+            color: #3a1c71;
+        }
+        
+        /* Estilo para mensagem de validação */
+        .validation-message {
+            color: #ff4d4d;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        /* Estilo para palavras não colocadas */
+        .failed-word {
+            color: #ff4d4d !important;
+            text-decoration: line-through;
+        }
+        
+        /* Container para impressão do gabarito */
+        .print-solution {
+            display: none;
+        }
+        
+        /* SVG para impressão */
+        .print-svg {
+            display: none;
+            width: 100%;
+            height: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .cell {
+                width: 24px;
+                height: 24px;
+                line-height: 24px;
+                font-size: 12px;
+            }
+            .config-panel {
+                flex-direction: column;
+            }
+            .game-container {
+                flex-direction: column;
+            }
+            .simple-word-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        /* Estilos de impressão - SOLUÇÃO DEFINITIVA */
+        @media print {
+            body {
+                background: white !important;
+                padding: 0;
+                margin: 0;
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .container {
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+                margin-bottom: 0 !important;
+                background: white !important;
+            }
+            header {
+                margin-bottom: 5px;
+                text-align: center;
+            }
+            h1 {
+                font-size: 1.5rem;
+                color: #3a1c71 !important;
+                padding-bottom: 0;
+                border-bottom: none;
+                margin-bottom: 5px;
+            }
+            h2 {
+                font-size: 1.2rem;
+                color: #3a1c71 !important;
+                margin-bottom: 10px;
+                text-align: center;
+            }
+            .config-panel,
+            .controls,
+            .status,
+            #solutions,
+            footer,
+            .highlight-toggle,
+            .teacher-note {
+                display: none !important;
+            }
+            .game-container {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 0;
+                page-break-after: always;
+            }
+            .grid-container,
+            .words-container {
+                width: 100%;
+                min-width: auto;
+            }
+            .simple-word-list {
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 1px;
+                margin-top: 10px;
+            }
+            .simple-word-item {
+                font-size: 0.9rem;
+                color: #3a1c71 !important;
+            }
+            
+            /* MOSTRAR o gabarito SVG na impressão */
+            .print-svg {
+                display: block !important;
+                page-break-before: always;
+                width: 100% !important;
+                height: auto !important;
+                max-width: 100% !important;
+            }
+            
+            .print-solution {
+                display: none !important;
+            }
+            
+            /* Rodapé para impressão */
+            body::after {
+                content: "Atividade lúdica desenvolvida exclusivamente para fins didáticos.";
+                display: block;
+                text-align: center;
+                margin-top: 20px;
+                font-size: 10pt;
+                color: black;
+                font-style: italic;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 id="puzzleTitle">Caça-Palavras em Zig-Zag</h1>
+        </header>
+
+        <div class="teacher-note">
+            Atividade lúdica desenvolvida exclusivamente para fins didáticos.
+        </div>
+
+        <div class="config-panel">
+            <div class="config-group">
+                <label for="puzzleName">Nome do Caça-Palavras:</label>
+                <input type="text" id="puzzleName" placeholder="Ex: Geometria Plana" value="">
+            </div>
+            <div class="config-group">
+                <label for="rows">Número de Linhas (15-25):</label>
+                <input type="number" id="rows" min="15" max="25" value="20">
+            </div>
+            <div class="config-group">
+                <label for="cols">Número de Colunas (15-21):</label>
+                <input type="number" id="cols" min="15" max="21" value="20">
+            </div>
+            <div class="config-group">
+                <label for="wordList">Palavras (uma por linha, máximo 25 palavras, 10 letras cada):</label>
+                <textarea id="wordList" rows="10"></textarea>
+                <div id="wordValidation" class="validation-message"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="generateGrid()">Gerar Caça-Palavras</button>
+            <button onclick="showSolutions()">Mostrar Soluções</button>
+            <button onclick="printWithSolution()">Imprimir com Gabarito</button>
+        </div>
+
+        <div class="status" id="status">Clique em "Gerar Caça-Palavras" para começar</div>
+
+        <div class="game-container">
+            <div class="grid-container">
+                <h2>Caça-Palavras</h2>
+                <div id="grid" class="grid"></div>
+            </div>
+            
+            <div class="words-container">
+                <h2>Banco de palavras</h2>
+                <div id="wordsToFind" class="simple-word-list"></div>
+            </div>
+        </div>
+
+        <div id="solutions" class="solutions-container">
+            <h2>Gabarito</h2>
+            <div class="solution-grid-container">
+                <div id="solutionGrid" class="grid"></div>
+                <div id="solutionPaths"></div>
+            </div>
+            
+            <div class="highlight-toggle">
+                <label for="highlightStyle">Estilo de destaque:</label>
+                <select id="highlightStyle" onchange="changeHighlightStyle()">
+                    <option value="text">Apenas texto</option>
+                    <option value="marker">Marca-texto (linha contínua)</option>
+                    <option value="pdf" selected>Estilo PDF (marca-texto colorido)</option>
+                </select>
+            </div>
+            
+            <div class="controls">
+                <button onclick="hideSolutions()">Ocultar Soluções</button>
+            </div>
+        </div>
+        
+        <!-- Área para impressão do gabarito como SVG -->
+        <div id="printSolution" class="print-solution">
+            <h1>Gabarito</h1>
+            <div id="printSolutionGrid" class="grid"></div>
+            <div class="teacher-note" style="margin-top: 20px;">
+                Atividade lúdica desenvolvida exclusivamente para fins didáticos.
+            </div>
+        </div>
+        
+        <!-- SVG para impressão do gabarito colorido -->
+        <svg id="printSvg" class="print-svg" viewBox="0 0 600 800" xmlns="http://www.w3.org/2000/svg">
+            <!-- O conteúdo do SVG será gerado dinamicamente -->
+        </svg>
+    </div>
+
+    <footer>
+        <p>Caça-Palavras em Zig-Zag</p>
+        <p>Atividade lúdica desenvolvida exclusivamente para fins didáticos.</p>
+    </footer>
+
+    <script>
+        // Variáveis globais
+        let rows = 20;
+        let cols = 20;
+        let words = [];
+        let placements = {};
+        let colorIndex = 0;
+        
+        // Cores para destaque
+        const highlightColors = [
+            '#FFFF00', '#00FF00', '#FF69B4', '#87CEEB', '#FFA500',
+            '#B0E0E6', '#90EE90', '#DDA0DD', '#98FB98', '#AFEEEE'
+        ];
+        
+        // Função para validar palavras
+        function validateWords(wordList) {
+            const words = wordList.toUpperCase().split('\n')
+                .map(word => word.trim().replace(/\s/g, ''))
+                .filter(word => word.length > 0);
+            
+            const validationMessage = document.getElementById('wordValidation');
+            validationMessage.style.display = 'none';
+            
+            if (words.length > 25) {
+                validationMessage.textContent = `Máximo de 25 palavras permitido. Você inseriu ${words.length}. As primeiras 25 serão usadas.`;
+                validationMessage.style.display = 'block';
+            }
+            
+            const longWords = words.filter(word => word.length > 10);
+            if (longWords.length > 0) {
+                validationMessage.textContent = `As seguintes palavras têm mais de 10 letras: ${longWords.join(', ')}`;
+                validationMessage.style.display = 'block';
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Função para imprimir com gabarito
+        function printWithSolution() {
+            generatePrintSVG();
+            setTimeout(() => {
+                window.print();
+            }, 100);
+        }
+        
+        // Gerar o gabarito como SVG (SEMPRE COLORIDO)
+        function generatePrintSVG() {
+            const svg = document.getElementById('printSvg');
+            svg.innerHTML = '';
+            
+            // Configurações do SVG
+            const cellSize = 25;
+            const startX = 50;
+            const startY = 100;
+            const gridWidth = cols * cellSize;
+            const gridHeight = rows * cellSize;
+            
+            // Título
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', '300');
+            title.setAttribute('y', '40');
+            title.setAttribute('text-anchor', 'middle');
+            title.setAttribute('font-family', 'Arial, sans-serif');
+            title.setAttribute('font-size', '24');
+            title.setAttribute('font-weight', 'bold');
+            title.setAttribute('fill', '#3a1c71');
+            title.textContent = 'Gabarito';
+            svg.appendChild(title);
+            
+            // Fundo do grid
+            const gridBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            gridBg.setAttribute('x', startX);
+            gridBg.setAttribute('y', startY);
+            gridBg.setAttribute('width', gridWidth);
+            gridBg.setAttribute('height', gridHeight);
+            gridBg.setAttribute('fill', 'white');
+            gridBg.setAttribute('stroke', '#8f94fb');
+            gridBg.setAttribute('stroke-width', '1');
+            svg.appendChild(gridBg);
+            
+            // Primeiro desenhar os retângulos coloridos
+            let colorIdx = 0;
+            for (const word of Object.keys(placements)) {
+                const color = highlightColors[colorIdx % highlightColors.length];
+                
+                for (const [r, c] of placements[word]) {
+                    const x = startX + c * cellSize;
+                    const y = startY + r * cellSize;
+                    
+                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttribute('x', x);
+                    rect.setAttribute('y', y);
+                    rect.setAttribute('width', cellSize);
+                    rect.setAttribute('height', cellSize);
+                    rect.setAttribute('fill', color);
+                    rect.setAttribute('stroke', '#8f94fb');
+                    rect.setAttribute('stroke-width', '0.5');
+                    svg.appendChild(rect);
+                }
+                
+                colorIdx++;
+            }
+            
+            // Depois desenhar as letras
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const x = startX + j * cellSize + cellSize / 2;
+                    const y = startY + i * cellSize + cellSize / 2 + 5;
+                    const letter = document.getElementById('solutionGrid').children[i * cols + j].textContent;
+                    
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', x);
+                    text.setAttribute('y', y);
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('font-family', 'Arial, sans-serif');
+                    text.setAttribute('font-size', '14');
+                    text.setAttribute('font-weight', 'bold');
+                    text.setAttribute('fill', 'black');
+                    text.textContent = letter;
+                    svg.appendChild(text);
+                }
+            }
+            
+            // Rodapé
+            const footer = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            footer.setAttribute('x', '300');
+            footer.setAttribute('y', startY + gridHeight + 40);
+            footer.setAttribute('text-anchor', 'middle');
+            footer.setAttribute('font-family', 'Arial, sans-serif');
+            footer.setAttribute('font-size', '12');
+            footer.setAttribute('font-style', 'italic');
+            footer.setAttribute('fill', 'black');
+            footer.textContent = 'Atividade lúdica desenvolvida exclusivamente para fins didáticos.';
+            svg.appendChild(footer);
+            
+            // Ajustar viewBox para incluir todo o conteúdo
+            svg.setAttribute('viewBox', `0 0 600 ${startY + gridHeight + 80}`);
+        }
+        
+        // Gerar o caça-palavras
+        function generateGrid() {
+            rows = parseInt(document.getElementById('rows').value) || 20;
+            cols = parseInt(document.getElementById('cols').value) || 20;
+            const wordText = document.getElementById('wordList').value;
+            const puzzleName = document.getElementById('puzzleName').value;
+
+            if (!validateWords(wordText)) return;
+
+            rows = Math.min(Math.max(rows, 15), 25);
+            cols = Math.min(Math.max(cols, 15), 21);
+            
+            document.getElementById('rows').value = rows;
+            document.getElementById('cols').value = cols;
+            document.getElementById('puzzleTitle').textContent = puzzleName || 'Caça-Palavras em Zig-Zag';
+            
+            words = wordText.toUpperCase().split('\n')
+                .map(word => word.trim().replace(/\s/g, ''))
+                .filter(word => word.length > 0)
+                .slice(0, 25);
+            
+            document.getElementById('grid').innerHTML = '';
+            document.getElementById('solutionGrid').innerHTML = '';
+            document.getElementById('solutionPaths').innerHTML = '';
+            document.getElementById('solutions').style.display = 'none';
+            document.getElementById('status').textContent = 'Gerando caça-palavras...';
+            
+            document.getElementById('grid').style.gridTemplateColumns = `repeat(${cols}, 28px)`;
+            document.getElementById('solutionGrid').style.gridTemplateColumns = `repeat(${cols}, 28px)`;
+            
+            let grid = Array(rows).fill().map(() => Array(cols).fill(''));
+            let solutionGrid = Array(rows).fill().map(() => Array(cols).fill(''));
+            placements = {};
+            colorIndex = 0;
+            
+            function isPositionFree(row, col) {
+                if (row < 0 || row >= rows || col < 0 || col >= cols) return false;
+                return grid[row][col] === '';
+            }
+            
+            function placeWordZigZag(word) {
+                const directions = [
+                    [0, 1], [1, 0], [0, -1], [-1, 0]
+                ];
+                
+                for (let attempt = 0; attempt < 800; attempt++) {
+                    const startRow = Math.floor(Math.random() * rows);
+                    const startCol = Math.floor(Math.random() * cols);
+                    
+                    let dirIndex = Math.floor(Math.random() * directions.length);
+                    let [dr, dc] = directions[dirIndex];
+                    
+                    let currentRow = startRow;
+                    let currentCol = startCol;
+                    let positions = [];
+                    let valid = true;
+                    
+                    for (let i = 0; i < word.length; i++) {
+                        if (!isPositionFree(currentRow, currentCol)) {
+                            valid = false;
+                            break;
+                        }
+                        
+                        positions.push([currentRow, currentCol]);
+                        
+                        if (i > 0 && i % 2 === 0 && i < word.length - 1) {
+                            const perpendicularDirs = directions.filter(([r, c]) => 
+                                (dr === 0 && r !== 0) || (dc === 0 && c !== 0));
+                            
+                            if (perpendicularDirs.length > 0) {
+                                const newDir = perpendicularDirs[Math.floor(Math.random() * perpendicularDirs.length)];
+                                dr = newDir[0];
+                                dc = newDir[1];
+                            }
+                        }
+                        
+                        currentRow += dr;
+                        currentCol += dc;
+                        
+                        if (currentRow < 0 || currentRow >= rows || currentCol < 0 || currentCol >= cols) {
+                            if (i === word.length - 1) break;
+                            valid = false;
+                            break;
+                        }
+                    }
+                    
+                    if (valid && positions.length === word.length) {
+                        for (let i = 0; i < word.length; i++) {
+                            const [r, c] = positions[i];
+                            grid[r][c] = word[i];
+                        }
+                        placements[word] = positions;
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            function placeWordStraight(word) {
+                const directions = [
+                    [0, 1], [1, 0], [0, -1], [-1, 0],
+                    [1, 1], [1, -1], [-1, 1], [-1, -1]
+                ];
+                
+                const shuffledDirections = [...directions].sort(() => Math.random() - 0.5);
+                
+                for (const [dr, dc] of shuffledDirections) {
+                    const maxRow = dr >= 0 ? rows - word.length * Math.abs(dr) : rows - 1;
+                    const maxCol = dc >= 0 ? cols - word.length * Math.abs(dc) : cols - 1;
+                    
+                    if (maxRow < 0 || maxCol < 0) continue;
+                    
+                    const startRow = dr >= 0 ? 0 : rows - 1;
+                    const startCol = dc >= 0 ? 0 : cols - 1;
+                    
+                    for (let attempt = 0; attempt < 150; attempt++) {
+                        const row = Math.floor(Math.random() * (maxRow - startRow + 1)) + startRow;
+                        const col = Math.floor(Math.random() * (maxCol - startCol + 1)) + startCol;
+                        
+                        let valid = true;
+                        const positions = [];
+                        
+                        for (let i = 0; i < word.length; i++) {
+                            const r = row + i * dr;
+                            const c = col + i * dc;
+                            
+                            if (r < 0 || r >= rows || c < 0 || c >= cols || 
+                                !isPositionFree(r, c)) {
+                                valid = false;
+                                break;
+                            }
+                            positions.push([r, c]);
+                        }
+                        
+                        if (valid) {
+                            for (let i = 0; i < word.length; i++) {
+                                const [r, c] = positions[i];
+                                grid[r][c] = word[i];
+                            }
+                            placements[word] = positions;
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            
+            const sortedWords = [...words].sort((a, b) => b.length - a.length);
+            let allPlaced = true;
+            const failedWords = [];
+            
+            for (const word of sortedWords) {
+                if (!placeWordZigZag(word)) {
+                    if (!placeWordStraight(word)) {
+                        failedWords.push(word);
+                        allPlaced = false;
+                    }
+                }
+            }
+            
+            const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    if (grid[i][j] === '') {
+                        grid[i][j] = letters[Math.floor(Math.random() * letters.length)];
+                    }
+                    solutionGrid[i][j] = grid[i][j];
+                }
+            }
+            
+            const gridElement = document.getElementById('grid');
+            gridElement.innerHTML = '';
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.textContent = grid[i][j];
+                    gridElement.appendChild(cell);
+                }
+            }
+            
+            const solutionGridElement = document.getElementById('solutionGrid');
+            solutionGridElement.innerHTML = '';
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell solution-cell';
+                    cell.textContent = solutionGrid[i][j];
+                    solutionGridElement.appendChild(cell);
+                }
+            }
+            
+            const wordsToFindElement = document.getElementById('wordsToFind');
+            wordsToFindElement.innerHTML = '';
+            for (const word of words) {
+                const wordElement = document.createElement('div');
+                wordElement.className = 'simple-word-item';
+                wordElement.textContent = word;
+                if (failedWords.includes(word)) {
+                    wordElement.classList.add('failed-word');
+                }
+                wordsToFindElement.appendChild(wordElement);
+            }
+            
+            if (allPlaced) {
+                document.getElementById('status').textContent = `Sucesso! Todas as ${words.length} palavras foram colocadas completamente.`;
+                document.getElementById('status').style.color = 'green';
+            } else {
+                document.getElementById('status').textContent = `${failedWords.length} palavra(s) não puderam ser colocadas: ${failedWords.join(', ')}. Tente aumentar o tamanho do grid.`;
+                document.getElementById('status').style.color = 'red';
+            }
+            
+            generateSolutionPaths();
+            generatePrintSVG();
+        }
+        
+        function generateSolutionPaths() {
+            const solutionPaths = document.getElementById('solutionPaths');
+            solutionPaths.innerHTML = '';
+            
+            const cellSize = 28;
+            const gap = 1;
+            
+            for (const word of Object.keys(placements)) {
+                const positions = placements[word];
+                if (!positions || positions.length === 0) continue;
+                
+                const firstPos = positions[0];
+                let minRow = firstPos[0], maxRow = firstPos[0];
+                let minCol = firstPos[1], maxCol = firstPos[1];
+                
+                for (const [r, c] of positions) {
+                    minRow = Math.min(minRow, r);
+                    maxRow = Math.max(maxRow, r);
+                    minCol = Math.min(minCol, c);
+                    maxCol = Math.max(maxCol, c);
+                }
+                
+                const width = (maxCol - minCol + 1) * (cellSize + gap) - gap;
+                const height = (maxRow - minRow + 1) * (cellSize + gap) - gap;
+                const left = minCol * (cellSize + gap);
+                const top = minRow * (cellSize + gap);
+                
+                const highlight = document.createElement('div');
+                highlight.className = 'solution-path';
+                highlight.style.width = `${width}px`;
+                highlight.style.height = `${height}px`;
+                highlight.style.left = `${left}px`;
+                highlight.style.top = `${top}px`;
+                highlight.style.backgroundColor = highlightColors[colorIndex % highlightColors.length];
+                colorIndex++;
+                
+                solutionPaths.appendChild(highlight);
+            }
+        }
+        
+        function changeHighlightStyle() {
+            const style = document.getElementById('highlightStyle').value;
+            const solutionPaths = document.getElementById('solutionPaths');
+            const solutionCells = document.querySelectorAll('#solutionGrid .solution-cell');
+            
+            solutionCells.forEach(cell => {
+                cell.classList.remove('highlighted');
+                cell.style.backgroundColor = '';
+                cell.style.color = '#000';
+                cell.style.fontWeight = 'normal';
+            });
+
+            if (style === 'text') {
+                solutionPaths.style.display = 'none';
+                for (const word of Object.keys(placements)) {
+                    for (const [r, c] of placements[word]) {
+                        const index = r * cols + c;
+                        if (solutionCells[index]) {
+                            solutionCells[index].style.fontWeight = 'bold';
+                            solutionCells[index].style.color = '#000';
+                        }
+                    }
+                }
+            } else if (style === 'marker') {
+                solutionPaths.style.display = 'block';
+            } else if (style === 'pdf') {
+                solutionPaths.style.display = 'none';
+                colorIndex = 0;
+                for (const word of Object.keys(placements)) {
+                    const color = highlightColors[colorIndex % highlightColors.length];
+                    for (const [r, c] of placements[word]) {
+                        const index = r * cols + c;
+                        if (solutionCells[index]) {
+                            solutionCells[index].classList.add('highlighted');
+                            solutionCells[index].style.backgroundColor = color;
+                            solutionCells[index].style.fontWeight = 'bold';
+                        }
+                    }
+                    colorIndex++;
+                }
+            }
+        }
+        
+        function showSolutions() {
+            document.getElementById('solutions').style.display = 'block';
+            changeHighlightStyle();
+        }
+        
+        function hideSolutions() {
+            document.getElementById('solutions').style.display = 'none';
+        }
+        
+        window.onload = function() {
+            generateGrid();
+        };
+    </script>
+</body>
+</html>
