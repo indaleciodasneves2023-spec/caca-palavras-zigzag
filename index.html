@@ -387,17 +387,6 @@
                 border: 1px solid #ddd;
             }
             
-            /* Rodapé de impressão com informações do professor */
-            .print-footer {
-                display: block !important;
-                text-align: center;
-                margin-top: 20px;
-                font-size: 8pt;
-                color: #666;
-                width: 100%;
-                font-style: italic;
-            }
-            
             /* MOSTRAR o gabarito SVG na impressão */
             .print-svg {
                 display: block !important;
@@ -410,13 +399,6 @@
             .print-solution {
                 display: none !important;
             }
-            
-            /* Rodapé único para impressão */
-                    }
-        
-        /* Ocultar rodapé de impressão na visualização normal */
-        .print-footer {
-            display: none;
         }
         
         .word-count {
@@ -538,18 +520,13 @@
         <div id="printSolution" class="print-solution">
             <h1>Gabarito</h1>
             <div id="printSolutionGrid" class="grid"></div>
-            <div class="teacher-note" style="margin-top: 20px;">
-                Atividade lúdica desenvolvida exclusivamente para fins didáticos.
-            </div>
         </div>
         
         <!-- SVG para impressão do gabarito colorido -->
         <svg id="printSvg" class="print-svg" viewBox="0 0 600 800" xmlns="http://www.w3.org/2000/svg">
             <!-- O conteúdo do SVG será gerado dinamicamente -->
         </svg>
-        
-        <!-- Rodapé para impressão -->
-            </div>
+    </div>
 
     <footer>
         <p>Caça-Palavras em Zig-Zag</p>
@@ -780,9 +757,9 @@
             colorIndex = 0;
             
             // Função para verificar se uma posição está livre
-            function isPositionFree(row, col, char) {
+            function isPositionFree(row, col) {
                 if (row < 0 || row >= rows || col < 0 || col >= cols) return false;
-                return grid[row][col] === '' || grid[row][col] === char;
+                return grid[row][col] === '';
             }
             
             // Função para colocar palavras em zig-zag (apenas ângulos retos)
@@ -795,7 +772,7 @@
                     [-1, 0]    // Vertical ↑
                 ];
                 
-                for (let attempt = 0; attempt < 800; attempt++) {
+                for (let attempt = 0; attempt < 1000; attempt++) {
                     // Escolher uma direção inicial
                     const startDirIndex = Math.floor(Math.random() * directions.length);
                     let [dr, dc] = directions[startDirIndex];
@@ -813,7 +790,7 @@
                     for (let i = 0; i < word.length; i++) {
                         // Verificar se a posição atual está dentro do grid e livre
                         if (currentRow < 0 || currentRow >= rows || currentCol < 0 || currentCol >= cols || 
-                            (!isPositionFree(currentRow, currentCol, word[i]))) {
+                            !isPositionFree(currentRow, currentCol)) {
                             valid = false;
                             break;
                         }
@@ -862,10 +839,8 @@
                     [-1, 0]    // Vertical ↑
                 ];
                 
-                for (let attempt = 0; attempt < 300; attempt++) {
-                    // Escolher uma direção aleatória
-                    const [dr, dc] = directions[Math.floor(Math.random() * directions.length)];
-                    
+                // Tentar cada direção
+                for (const [dr, dc] of directions) {
                     // Calcular posições iniciais máximas
                     let maxRow, maxCol;
                     if (dr === 1) {
@@ -887,38 +862,42 @@
                     // Verificar se é possível colocar a palavra
                     if (maxRow < 0 || maxCol < 0) continue;
                     
-                    // Escolher uma posição inicial aleatória
-                    const startRow = dr === 0 ? Math.floor(Math.random() * rows) : 
-                                      dr === 1 ? Math.floor(Math.random() * (maxRow + 1)) : 
-                                      Math.floor(Math.random() * (rows - maxRow)) + maxRow;
-                    
-                    const startCol = dc === 0 ? Math.floor(Math.random() * cols) : 
-                                      dc === 1 ? Math.floor(Math.random() * (maxCol + 1)) : 
-                                      Math.floor(Math.random() * (cols - maxCol)) + maxCol;
-                    
-                    let valid = true;
-                    const positions = [];
-                    
-                    // Verificar se todas as posições estão livres
-                    for (let i = 0; i < word.length; i++) {
-                        const r = startRow + i * dr;
-                        const c = startCol + i * dc;
+                    // Tentar várias posições iniciais
+                    for (let attempt = 0; attempt < 100; attempt++) {
+                        // Escolher uma posição inicial aleatória
+                        const startRow = dr === 0 ? Math.floor(Math.random() * rows) : 
+                                          dr === 1 ? Math.floor(Math.random() * (maxRow + 1)) : 
+                                          Math.floor(Math.random() * (rows - maxRow)) + maxRow;
                         
-                        if (!isPositionFree(r, c, word[i])) {
-                            valid = false;
-                            break;
-                        }
-                        positions.push([r, c]);
-                    }
-                    
-                    if (valid) {
-                        // Colocar a palavra no grid
+                        const startCol = dc === 0 ? Math.floor(Math.random() * cols) : 
+                                          dc === 1 ? Math.floor(Math.random() * (maxCol + 1)) : 
+                                          Math.floor(Math.random() * (cols - maxCol)) + maxCol;
+                        
+                        let valid = true;
+                        const positions = [];
+                        
+                        // Verificar se todas as posições estão livres
                         for (let i = 0; i < word.length; i++) {
-                            const [r, c] = positions[i];
-                            grid[r][c] = word[i];
+                            const r = startRow + i * dr;
+                            const c = startCol + i * dc;
+                            
+                            if (r < 0 || r >= rows || c < 0 || c >= cols || 
+                                !isPositionFree(r, c)) {
+                                valid = false;
+                                break;
+                            }
+                            positions.push([r, c]);
                         }
-                        placements[word] = positions;
-                        return true;
+                        
+                        if (valid) {
+                            // Colocar a palavra no grid
+                            for (let i = 0; i < word.length; i++) {
+                                const [r, c] = positions[i];
+                                grid[r][c] = word[i];
+                            }
+                            placements[word] = positions;
+                            return true;
+                        }
                     }
                 }
                 return false;
