@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Caça-Palavras em Zig-Zag</title>
+    <title>Caça-Palavras em Zig-Zag - Apenas Ângulos Retos</title>
     <style>
         * {
             box-sizing: border-box;
@@ -15,7 +15,7 @@
             background: linear-gradient(to bottom, #3a1c71, #d76d77, #ffaf7b);
             color: #333;
             min-height: 100vh;
-            padding: 20px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -26,49 +26,53 @@
             background-color: white;
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            padding: 25px;
-            margin-bottom: 30px;
+            padding: 20px;
+            margin-bottom: 20px;
         }
         header {
             text-align: center;
             margin-bottom: 15px;
+            padding-bottom: 5px;
         }
         h1 {
             color: #3a1c71;
-            font-size: 2.5rem;
-            margin-bottom: 5px;
+            font-size: 2.2rem;
+            margin-bottom: 10px;
         }
         .config-panel {
             background-color: #f5f7ff;
-            padding: 20px;
+            padding: 15px;
             border-radius: 10px;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
+            gap: 15px;
             justify-content: center;
         }
         .config-group {
             display: flex;
             flex-direction: column;
             min-width: 200px;
+            flex: 1;
         }
         label {
             font-weight: bold;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             color: #3a1c71;
+            font-size: 0.95rem;
         }
-        input, textarea {
+        input, textarea, select {
             padding: 10px;
             border: 2px solid #8f94fb;
             border-radius: 5px;
             font-size: 16px;
+            width: 100%;
         }
         .game-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 30px;
-            margin-bottom: 25px;
+            gap: 20px;
+            margin-bottom: 20px;
         }
         .grid-container {
             flex: 1;
@@ -80,10 +84,9 @@
         }
         h2 {
             color: #3a1c71;
-            margin-bottom: 15px;
-            padding-bottom: 5px;
-            border-bottom: 2px solid #8f94fb;
+            margin-bottom: 12px;
             text-align: center;
+            font-size: 1.5rem;
         }
         .grid {
             display: grid;
@@ -91,6 +94,9 @@
             margin: 0 auto;
             justify-content: center;
             position: relative;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
         }
         .cell {
             width: 28px;
@@ -105,20 +111,25 @@
             transition: all 0.2s;
             position: relative;
             z-index: 2;
+            cursor: pointer;
         }
-        .cell:hover {
-            background-color: #f0f0f0;
-            transform: scale(1.05);
+        .cell.selected {
+            background-color: #a8d8ff !important;
+            color: #000;
+        }
+        .cell.found {
+            background-color: #c8f7c5 !important;
+            color: #000;
         }
         .controls {
             display: flex;
             justify-content: center;
-            gap: 15px;
-            margin: 25px 0;
+            gap: 12px;
+            margin: 20px 0;
             flex-wrap: wrap;
         }
         button {
-            padding: 12px 25px;
+            padding: 12px 20px;
             background: linear-gradient(to right, #3a1c71, #8f94fb);
             color: white;
             border: none;
@@ -127,6 +138,8 @@
             font-size: 16px;
             font-weight: bold;
             transition: all 0.3s;
+            flex: 1;
+            min-width: 160px;
         }
         button:hover {
             transform: translateY(-3px);
@@ -138,39 +151,40 @@
         }
         .solutions-container {
             display: none;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 2px dashed #3a1c71;
+            margin-top: 25px;
+            padding-top: 15px;
         }
         .status {
             text-align: center;
-            margin-top: 15px;
+            margin-top: 12px;
             font-weight: bold;
             color: #3a1c71;
+            font-size: 1rem;
         }
         footer {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 15px;
             color: white;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
         
         /* Estilos para o efeito de marca-texto no gabarito */
         .solution-path {
             position: absolute;
             z-index: 1;
-            border-radius: 3px;
+            border-radius: 5px;
             pointer-events: none;
         }
         .solution-grid-container {
             position: relative;
         }
         .highlight-toggle {
-            margin-top: 15px;
+            margin-top: 12px;
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            flex-wrap: wrap;
         }
         
         /* Novos estilos para o gabarito estilo PDF */
@@ -187,42 +201,26 @@
         /* Estilos do banco de palavras na tela e impressão */
         .simple-word-list {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 5px;
             padding: 10px;
             list-style-type: none;
         }
         .simple-word-item {
-            padding: 2px;
+            padding: 6px 8px;
+            background-color: #e8f4fc;
+            border-radius: 5px;
             text-align: left;
             font-weight: normal;
             font-size: 0.9rem;
             color: #3a1c71;
+            transition: all 0.3s;
+            line-height: 1.3;
         }
-        
-        /* Estilo para a observação do professor */
-        .teacher-note {
-            text-align: center;
-            margin: 15px 0;
-            padding: 10px;
-            background-color: #f5f7ff;
-            border-radius: 8px;
-            font-style: italic;
-            color: #3a1c71;
-        }
-        
-        /* Estilo para mensagem de validação */
-        .validation-message {
-            color: #ff4d4d;
-            font-size: 0.9rem;
-            margin-top: 5px;
-            display: none;
-        }
-        
-        /* Estilo para palavras não colocadas */
-        .failed-word {
-            color: #ff4d4d !important;
+        .simple-word-item.found {
+            background-color: #d4f7e6;
             text-decoration: line-through;
+            color: #27ae60;
         }
         
         /* Container para impressão do gabarito */
@@ -237,25 +235,87 @@
             height: auto;
         }
         
+        /* Melhorias para mobile */
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 15px;
+                border-radius: 10px;
+            }
+            h1 {
+                font-size: 1.8rem;
+                margin-bottom: 8px;
+            }
+            .config-panel {
+                flex-direction: column;
+                gap: 12px;
+                padding: 12px;
+            }
+            .config-group {
+                min-width: 100%;
+            }
+            .game-container {
+                flex-direction: column;
+                gap: 15px;
+            }
             .cell {
                 width: 24px;
                 height: 24px;
                 line-height: 24px;
                 font-size: 12px;
             }
-            .config-panel {
+            .controls {
                 flex-direction: column;
+                align-items: center;
             }
-            .game-container {
-                flex-direction: column;
+            button {
+                width: 100%;
+                max-width: 280px;
             }
             .simple-word-list {
                 grid-template-columns: repeat(2, 1fr);
             }
+            h2 {
+                font-size: 1.3rem;
+                margin-bottom: 10px;
+            }
         }
         
-        /* Estilos de impressão - SOLUÇÃO DEFINITIVA */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+            .cell {
+                width: 22px;
+                height: 22px;
+                line-height: 22px;
+                font-size: 12px;
+            }
+            .simple-word-list {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 4px;
+            }
+            .simple-word-item {
+                font-size: 0.85rem;
+                padding: 5px 6px;
+            }
+            button {
+                padding: 10px 15px;
+                font-size: 14px;
+                min-width: 140px;
+            }
+            input, textarea, select {
+                padding: 8px;
+                font-size: 14px;
+            }
+            label {
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Estilos de impressão */
         @media print {
             body {
                 background: white !important;
@@ -274,21 +334,24 @@
                 background: white !important;
             }
             header {
-                margin-bottom: 5px;
+                margin-bottom: 10px;
                 text-align: center;
             }
             h1 {
                 font-size: 1.5rem;
                 color: #3a1c71 !important;
-                padding-bottom: 0;
-                border-bottom: none;
+                padding-bottom: 5px;
                 margin-bottom: 5px;
             }
+            /* Remover o subtítulo "Caça-Palavras" na versão impressa */
+            .grid-container h2 {
+                display: none !important;
+            }
             h2 {
-                font-size: 1.2rem;
                 color: #3a1c71 !important;
-                margin-bottom: 10px;
                 text-align: center;
+                font-size: 1.3rem;
+                margin-bottom: 8px;
             }
             .config-panel,
             .controls,
@@ -302,9 +365,8 @@
             .game-container {
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
+                gap: 15px;
                 margin-bottom: 0;
-                page-break-after: always;
             }
             .grid-container,
             .words-container {
@@ -313,12 +375,27 @@
             }
             .simple-word-list {
                 grid-template-columns: repeat(4, 1fr) !important;
-                gap: 1px;
-                margin-top: 10px;
+                gap: 2px;
             }
             .simple-word-item {
-                font-size: 0.9rem;
+                font-size: 0.8rem;
                 color: #3a1c71 !important;
+                background-color: transparent !important;
+                text-align: left;
+                padding: 2px 4px;
+                line-height: 1.2;
+                border: 1px solid #ddd;
+            }
+            
+            /* Rodapé de impressão com informações do professor */
+            .print-footer {
+                display: block !important;
+                text-align: center;
+                margin-top: 20px;
+                font-size: 8pt;
+                color: #666;
+                width: 100%;
+                font-style: italic;
             }
             
             /* MOSTRAR o gabarito SVG na impressão */
@@ -334,8 +411,8 @@
                 display: none !important;
             }
             
-            /* Rodapé para impressão */
-            body::after {
+            /* Rodapé único para impressão */
+            .container::after {
                 content: "Atividade lúdica desenvolvida exclusivamente para fins didáticos.";
                 display: block;
                 text-align: center;
@@ -343,7 +420,53 @@
                 font-size: 10pt;
                 color: black;
                 font-style: italic;
+                width: 100%;
             }
+        }
+        
+        /* Ocultar rodapé de impressão na visualização normal */
+        .print-footer {
+            display: none;
+        }
+        
+        .word-count {
+            font-size: 0.9rem;
+            text-align: center;
+            margin-top: 5px;
+            color: #3a1c71;
+        }
+        
+        .error {
+            color: red;
+            font-weight: bold;
+            margin-top: 5px;
+            font-size: 0.9rem;
+        }
+        
+        /* Observação do professor */
+        .teacher-note {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f5f7ff;
+            border-radius: 8px;
+            font-style: italic;
+            color: #3a1c71;
+        }
+        
+        /* Indicador de seleção */
+        .selection-indicator {
+            position: absolute;
+            background-color: rgba(168, 216, 255, 0.5);
+            pointer-events: none;
+            z-index: 1;
+            border-radius: 3px;
+        }
+        
+        /* Estilo para palavras não colocadas */
+        .failed-word {
+            color: #ff4d4d !important;
+            text-decoration: line-through;
         }
     </style>
 </head>
@@ -360,7 +483,7 @@
         <div class="config-panel">
             <div class="config-group">
                 <label for="puzzleName">Nome do Caça-Palavras:</label>
-                <input type="text" id="puzzleName" placeholder="Ex: Geometria Plana" value="">
+                <input type="text" id="puzzleName" placeholder="Ex: Geometria Plana">
             </div>
             <div class="config-group">
                 <label for="rows">Número de Linhas (15-25):</label>
@@ -373,13 +496,15 @@
             <div class="config-group">
                 <label for="wordList">Palavras (uma por linha, máximo 25 palavras, 10 letras cada):</label>
                 <textarea id="wordList" rows="10"></textarea>
-                <div id="wordValidation" class="validation-message"></div>
+                <div class="word-count" id="wordCount">Palavras: 0/25</div>
+                <div class="error" id="wordError"></div>
             </div>
         </div>
 
         <div class="controls">
             <button onclick="generateGrid()">Gerar Caça-Palavras</button>
             <button onclick="showSolutions()">Mostrar Soluções</button>
+            <button onclick="window.print()">Imprimir</button>
             <button onclick="printWithSolution()">Imprimir com Gabarito</button>
         </div>
 
@@ -387,8 +512,9 @@
 
         <div class="game-container">
             <div class="grid-container">
-                <h2>Caça-Palavras</h2>
+                <h2>Caça-Palavras em Zig-Zag</h2>
                 <div id="grid" class="grid"></div>
+                <div id="selectionIndicator" class="selection-indicator"></div>
             </div>
             
             <div class="words-container">
@@ -418,7 +544,7 @@
             </div>
         </div>
         
-        <!-- Área para impressão do gabarito como SVG -->
+        <!-- Container para impressão do gabarito -->
         <div id="printSolution" class="print-solution">
             <h1>Gabarito</h1>
             <div id="printSolutionGrid" class="grid"></div>
@@ -431,6 +557,11 @@
         <svg id="printSvg" class="print-svg" viewBox="0 0 600 800" xmlns="http://www.w3.org/2000/svg">
             <!-- O conteúdo do SVG será gerado dinamicamente -->
         </svg>
+        
+        <!-- Rodapé para impressão -->
+        <div class="print-footer">
+            Atividade lúdica desenvolvida exclusivamente para fins didáticos.
+        </div>
     </div>
 
     <footer>
@@ -439,41 +570,73 @@
     </footer>
 
     <script>
+        // Constantes
+        const MAX_WORDS = 25;
+        const MAX_WORD_LENGTH = 10;
+        
         // Variáveis globais
         let rows = 20;
         let cols = 20;
         let words = [];
         let placements = {};
         let colorIndex = 0;
+        let foundWords = [];
         
-        // Cores para destaque
+        // Variáveis para seleção interativa
+        let isSelecting = false;
+        let startCell = null;
+        let selectedCells = [];
+        let selectionIndicator = null;
+        
+        // Cores para o estilo PDF (diferentes tons de marca-texto)
         const highlightColors = [
             '#FFFF00', '#00FF00', '#FF69B4', '#87CEEB', '#FFA500',
             '#B0E0E6', '#90EE90', '#DDA0DD', '#98FB98', '#AFEEEE'
         ];
         
-        // Função para validar palavras
-        function validateWords(wordList) {
-            const words = wordList.toUpperCase().split('\n')
+        // Inicializar a contagem de palavras
+        document.addEventListener('DOMContentLoaded', function() {
+            updateWordCount();
+            document.getElementById('wordList').addEventListener('input', updateWordCount);
+            document.getElementById('rows').addEventListener('change', validateGridSize);
+            document.getElementById('cols').addEventListener('change', validateGridSize);
+            
+            // Inicializar o indicador de seleção
+            selectionIndicator = document.getElementById('selectionIndicator');
+        });
+        
+        // Atualizar contador de palavras
+        function updateWordCount() {
+            const wordText = document.getElementById('wordList').value;
+            const wordArray = wordText.toUpperCase().split('\n')
                 .map(word => word.trim().replace(/\s/g, ''))
                 .filter(word => word.length > 0);
             
-            const validationMessage = document.getElementById('wordValidation');
-            validationMessage.style.display = 'none';
+            const wordCount = wordArray.length;
+            document.getElementById('wordCount').textContent = `Palavras: ${wordCount}/${MAX_WORDS}`;
             
-            if (words.length > 25) {
-                validationMessage.textContent = `Máximo de 25 palavras permitido. Você inseriu ${words.length}. As primeiras 25 serão usadas.`;
-                validationMessage.style.display = 'block';
+            if (wordCount > MAX_WORDS) {
+                document.getElementById('wordError').textContent = `Máximo de ${MAX_WORDS} palavras excedido!`;
+            } else {
+                document.getElementById('wordError').textContent = '';
             }
+        }
+        
+        // Validar tamanho da grade
+        function validateGridSize() {
+            const rowsInput = document.getElementById('rows');
+            const colsInput = document.getElementById('cols');
             
-            const longWords = words.filter(word => word.length > 10);
-            if (longWords.length > 0) {
-                validationMessage.textContent = `As seguintes palavras têm mais de 10 letras: ${longWords.join(', ')}`;
-                validationMessage.style.display = 'block';
-                return false;
-            }
+            let rowsValue = parseInt(rowsInput.value);
+            let colsValue = parseInt(colsInput.value);
             
-            return true;
+            if (rowsValue < 15) rowsValue = 15;
+            if (rowsValue > 25) rowsValue = 25;
+            if (colsValue < 15) colsValue = 15;
+            if (colsValue > 21) colsValue = 21;
+            
+            rowsInput.value = rowsValue;
+            colsInput.value = colsValue;
         }
         
         // Função para imprimir com gabarito
@@ -505,7 +668,7 @@
             title.setAttribute('font-size', '24');
             title.setAttribute('font-weight', 'bold');
             title.setAttribute('fill', '#3a1c71');
-            title.textContent = 'Gabarito';
+            title.textContent = 'Gabarito - ' + (document.getElementById('puzzleTitle').textContent || 'Caça-Palavras em Zig-Zag');
             svg.appendChild(title);
             
             // Fundo do grid
@@ -547,7 +710,14 @@
                 for (let j = 0; j < cols; j++) {
                     const x = startX + j * cellSize + cellSize / 2;
                     const y = startY + i * cellSize + cellSize / 2 + 5;
-                    const letter = document.getElementById('solutionGrid').children[i * cols + j].textContent;
+                    const solutionGrid = document.getElementById('solutionGrid');
+                    let letter = '';
+                    if (solutionGrid && solutionGrid.children[i * cols + j]) {
+                        letter = solutionGrid.children[i * cols + j].textContent;
+                    } else {
+                        const grid = document.getElementById('grid');
+                        letter = grid.children[i * cols + j].textContent;
+                    }
                     
                     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                     text.setAttribute('x', x);
@@ -580,91 +750,110 @@
         
         // Gerar o caça-palavras
         function generateGrid() {
+            // Obter configurações do usuário
             rows = parseInt(document.getElementById('rows').value) || 20;
             cols = parseInt(document.getElementById('cols').value) || 20;
             const wordText = document.getElementById('wordList').value;
             const puzzleName = document.getElementById('puzzleName').value;
 
-            if (!validateWords(wordText)) return;
-
-            rows = Math.min(Math.max(rows, 15), 25);
-            cols = Math.min(Math.max(cols, 15), 21);
-            
-            document.getElementById('rows').value = rows;
-            document.getElementById('cols').value = cols;
+            // Atualiza o título do caça-palavras
             document.getElementById('puzzleTitle').textContent = puzzleName || 'Caça-Palavras em Zig-Zag';
             
+            // Processar palavras
             words = wordText.toUpperCase().split('\n')
                 .map(word => word.trim().replace(/\s/g, ''))
                 .filter(word => word.length > 0)
-                .slice(0, 25);
+                .map(word => word.length > MAX_WORD_LENGTH ? word.substring(0, MAX_WORD_LENGTH) : word);
             
+            // Verificar se excede o número máximo de palavras
+            if (words.length > MAX_WORDS) {
+                document.getElementById('status').textContent = `Máximo de ${MAX_WORDS} palavras permitido. As primeiras ${MAX_WORDS} serão utilizadas.`;
+                document.getElementById('status').style.color = 'red';
+                words = words.slice(0, MAX_WORDS);
+            }
+            
+            // Limpar grids anteriores
             document.getElementById('grid').innerHTML = '';
             document.getElementById('solutionGrid').innerHTML = '';
             document.getElementById('solutionPaths').innerHTML = '';
             document.getElementById('solutions').style.display = 'none';
-            document.getElementById('status').textContent = 'Gerando caça-palavras...';
+            document.getElementById('wordsToFind').innerHTML = '';
             
+            foundWords = [];
+            selectedCells = [];
+            
+            // Ajustar o layout do grid
             document.getElementById('grid').style.gridTemplateColumns = `repeat(${cols}, 28px)`;
             document.getElementById('solutionGrid').style.gridTemplateColumns = `repeat(${cols}, 28px)`;
             
+            // Criar grid vazio
             let grid = Array(rows).fill().map(() => Array(cols).fill(''));
             let solutionGrid = Array(rows).fill().map(() => Array(cols).fill(''));
             placements = {};
             colorIndex = 0;
             
-            function isPositionFree(row, col) {
+            // Função para verificar se uma posição está livre
+            function isPositionFree(row, col, char) {
                 if (row < 0 || row >= rows || col < 0 || col >= cols) return false;
-                return grid[row][col] === '';
+                return grid[row][col] === '' || grid[row][col] === char;
             }
             
+            // Função para colocar palavras em zig-zag (apenas ângulos retos)
             function placeWordZigZag(word) {
+                // Direções permitidas: apenas horizontal e vertical (sem diagonais)
                 const directions = [
-                    [0, 1], [1, 0], [0, -1], [-1, 0]
+                    [0, 1],    // Horizontal →
+                    [1, 0],    // Vertical ↓
+                    [0, -1],   // Horizontal ←
+                    [-1, 0]    // Vertical ↑
                 ];
                 
                 for (let attempt = 0; attempt < 800; attempt++) {
+                    // Escolher uma direção inicial
+                    const startDirIndex = Math.floor(Math.random() * directions.length);
+                    let [dr, dc] = directions[startDirIndex];
+                    
+                    // Escolher ponto de partida
                     const startRow = Math.floor(Math.random() * rows);
                     const startCol = Math.floor(Math.random() * cols);
-                    
-                    let dirIndex = Math.floor(Math.random() * directions.length);
-                    let [dr, dc] = directions[dirIndex];
                     
                     let currentRow = startRow;
                     let currentCol = startCol;
                     let positions = [];
                     let valid = true;
                     
+                    // Tentar colocar a palavra
                     for (let i = 0; i < word.length; i++) {
-                        if (!isPositionFree(currentRow, currentCol)) {
+                        // Verificar se a posição atual está dentro do grid e livre
+                        if (currentRow < 0 || currentRow >= rows || currentCol < 0 || currentCol >= cols || 
+                            (!isPositionFree(currentRow, currentCol, word[i]))) {
                             valid = false;
                             break;
                         }
                         
                         positions.push([currentRow, currentCol]);
                         
-                        if (i > 0 && i % 2 === 0 && i < word.length - 1) {
-                            const perpendicularDirs = directions.filter(([r, c]) => 
-                                (dr === 0 && r !== 0) || (dc === 0 && c !== 0));
-                            
-                            if (perpendicularDirs.length > 0) {
-                                const newDir = perpendicularDirs[Math.floor(Math.random() * perpendicularDirs.length)];
-                                dr = newDir[0];
-                                dc = newDir[1];
+                        // A cada 2 letras (a partir da segunda), mudar de direção
+                        if (i < word.length - 1) {
+                            if (i > 0 && i % 2 === 1) {
+                                // Mudar para uma direção perpendicular
+                                const perpendicularDirs = directions.filter(([r, c]) => 
+                                    (dr === 0 && r !== 0) || (dc === 0 && c !== 0));
+                                
+                                if (perpendicularDirs.length > 0) {
+                                    const newDirIndex = Math.floor(Math.random() * perpendicularDirs.length);
+                                    [dr, dc] = perpendicularDirs[newDirIndex];
+                                }
                             }
-                        }
-                        
-                        currentRow += dr;
-                        currentCol += dc;
-                        
-                        if (currentRow < 0 || currentRow >= rows || currentCol < 0 || currentCol >= cols) {
-                            if (i === word.length - 1) break;
-                            valid = false;
-                            break;
+                            
+                            // Avançar para a próxima posição
+                            currentRow += dr;
+                            currentCol += dc;
                         }
                     }
                     
                     if (valid && positions.length === word.length) {
+                        // Colocar a palavra no grid
                         for (let i = 0; i < word.length; i++) {
                             const [r, c] = positions[i];
                             grid[r][c] = word[i];
@@ -676,68 +865,96 @@
                 return false;
             }
             
+            // Função para colocar palavras em linha reta (fallback)
             function placeWordStraight(word) {
+                // Direções permitidas: apenas horizontal e vertical (sem diagonais)
                 const directions = [
-                    [0, 1], [1, 0], [0, -1], [-1, 0],
-                    [1, 1], [1, -1], [-1, 1], [-1, -1]
+                    [0, 1],    // Horizontal →
+                    [1, 0],    // Vertical ↓
+                    [0, -1],   // Horizontal ←
+                    [-1, 0]    // Vertical ↑
                 ];
                 
-                const shuffledDirections = [...directions].sort(() => Math.random() - 0.5);
-                
-                for (const [dr, dc] of shuffledDirections) {
-                    const maxRow = dr >= 0 ? rows - word.length * Math.abs(dr) : rows - 1;
-                    const maxCol = dc >= 0 ? cols - word.length * Math.abs(dc) : cols - 1;
+                for (let attempt = 0; attempt < 300; attempt++) {
+                    // Escolher uma direção aleatória
+                    const [dr, dc] = directions[Math.floor(Math.random() * directions.length)];
                     
+                    // Calcular posições iniciais máximas
+                    let maxRow, maxCol;
+                    if (dr === 1) {
+                        maxRow = rows - word.length;
+                    } else if (dr === -1) {
+                        maxRow = word.length - 1;
+                    } else {
+                        maxRow = rows - 1;
+                    }
+                    
+                    if (dc === 1) {
+                        maxCol = cols - word.length;
+                    } else if (dc === -1) {
+                        maxCol = word.length - 1;
+                    } else {
+                        maxCol = cols - 1;
+                    }
+                    
+                    // Verificar se é possível colocar a palavra
                     if (maxRow < 0 || maxCol < 0) continue;
                     
-                    const startRow = dr >= 0 ? 0 : rows - 1;
-                    const startCol = dc >= 0 ? 0 : cols - 1;
+                    // Escolher uma posição inicial aleatória
+                    const startRow = dr === 0 ? Math.floor(Math.random() * rows) : 
+                                      dr === 1 ? Math.floor(Math.random() * (maxRow + 1)) : 
+                                      Math.floor(Math.random() * (rows - maxRow)) + maxRow;
                     
-                    for (let attempt = 0; attempt < 150; attempt++) {
-                        const row = Math.floor(Math.random() * (maxRow - startRow + 1)) + startRow;
-                        const col = Math.floor(Math.random() * (maxCol - startCol + 1)) + startCol;
+                    const startCol = dc === 0 ? Math.floor(Math.random() * cols) : 
+                                      dc === 1 ? Math.floor(Math.random() * (maxCol + 1)) : 
+                                      Math.floor(Math.random() * (cols - maxCol)) + maxCol;
+                    
+                    let valid = true;
+                    const positions = [];
+                    
+                    // Verificar se todas as posições estão livres
+                    for (let i = 0; i < word.length; i++) {
+                        const r = startRow + i * dr;
+                        const c = startCol + i * dc;
                         
-                        let valid = true;
-                        const positions = [];
-                        
+                        if (!isPositionFree(r, c, word[i])) {
+                            valid = false;
+                            break;
+                        }
+                        positions.push([r, c]);
+                    }
+                    
+                    if (valid) {
+                        // Colocar a palavra no grid
                         for (let i = 0; i < word.length; i++) {
-                            const r = row + i * dr;
-                            const c = col + i * dc;
-                            
-                            if (r < 0 || r >= rows || c < 0 || c >= cols || 
-                                !isPositionFree(r, c)) {
-                                valid = false;
-                                break;
-                            }
-                            positions.push([r, c]);
+                            const [r, c] = positions[i];
+                            grid[r][c] = word[i];
                         }
-                        
-                        if (valid) {
-                            for (let i = 0; i < word.length; i++) {
-                                const [r, c] = positions[i];
-                                grid[r][c] = word[i];
-                            }
-                            placements[word] = positions;
-                            return true;
-                        }
+                        placements[word] = positions;
+                        return true;
                     }
                 }
                 return false;
             }
             
+            // Ordenar palavras por tamanho (maiores primeiro)
             const sortedWords = [...words].sort((a, b) => b.length - a.length);
+            
+            // Colocar palavras no grid
             let allPlaced = true;
             const failedWords = [];
             
             for (const word of sortedWords) {
                 if (!placeWordZigZag(word)) {
                     if (!placeWordStraight(word)) {
+                        console.log(`Não foi possível colocar: ${word}`);
                         failedWords.push(word);
                         allPlaced = false;
                     }
                 }
             }
             
+            // Preencher espaços vazios com letras aleatórias
             const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
             for (let i = 0; i < rows; i++) {
                 for (let j = 0; j < cols; j++) {
@@ -748,6 +965,7 @@
                 }
             }
             
+            // Renderizar o grid principal
             const gridElement = document.getElementById('grid');
             gridElement.innerHTML = '';
             for (let i = 0; i < rows; i++) {
@@ -755,10 +973,24 @@
                     const cell = document.createElement('div');
                     cell.className = 'cell';
                     cell.textContent = grid[i][j];
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    
+                    // Adicionar eventos para seleção interativa
+                    cell.addEventListener('mousedown', startSelection);
+                    cell.addEventListener('touchstart', startSelectionTouch);
+                    
                     gridElement.appendChild(cell);
                 }
             }
             
+            // Adicionar eventos de mouse/touch ao documento para seleção contínua
+            document.addEventListener('mousemove', continueSelection);
+            document.addEventListener('mouseup', endSelection);
+            document.addEventListener('touchmove', continueSelectionTouch, { passive: false });
+            document.addEventListener('touchend', endSelection);
+            
+            // Renderizar o grid de solução
             const solutionGridElement = document.getElementById('solutionGrid');
             solutionGridElement.innerHTML = '';
             for (let i = 0; i < rows; i++) {
@@ -770,30 +1002,189 @@
                 }
             }
             
+            // Renderizar a lista de palavras
             const wordsToFindElement = document.getElementById('wordsToFind');
             wordsToFindElement.innerHTML = '';
             for (const word of words) {
                 const wordElement = document.createElement('div');
                 wordElement.className = 'simple-word-item';
                 wordElement.textContent = word;
+                wordElement.dataset.word = word;
                 if (failedWords.includes(word)) {
                     wordElement.classList.add('failed-word');
+                    wordElement.title = 'Não foi possível colocar esta palavra';
                 }
                 wordsToFindElement.appendChild(wordElement);
             }
             
+            // Atualizar status
             if (allPlaced) {
-                document.getElementById('status').textContent = `Sucesso! Todas as ${words.length} palavras foram colocadas completamente.`;
+                document.getElementById('status').textContent = 'Todas as palavras foram colocadas com sucesso!';
                 document.getElementById('status').style.color = 'green';
             } else {
-                document.getElementById('status').textContent = `${failedWords.length} palavra(s) não puderam ser colocadas: ${failedWords.join(', ')}. Tente aumentar o tamanho do grid.`;
+                document.getElementById('status').textContent = `Algumas palavras não puderam ser colocadas. Tente palavras menores ou menos palavras.`;
                 document.getElementById('status').style.color = 'red';
             }
             
+            // Gerar os caminhos de solução
             generateSolutionPaths();
+            
+            // Gerar o SVG para impressão do gabarito
             generatePrintSVG();
         }
         
+        // Funções para seleção interativa
+        function startSelection(e) {
+            e.preventDefault();
+            isSelecting = true;
+            const cell = e.target;
+            if (cell.classList.contains('cell')) {
+                startCell = cell;
+                clearSelection();
+                toggleCellSelection(cell);
+                updateSelectionIndicator();
+            }
+        }
+        
+        function startSelectionTouch(e) {
+            e.preventDefault();
+            isSelecting = true;
+            const touch = e.touches[0];
+            const cell = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (cell && cell.classList.contains('cell')) {
+                startCell = cell;
+                clearSelection();
+                toggleCellSelection(cell);
+                updateSelectionIndicator();
+            }
+        }
+        
+        function continueSelection(e) {
+            if (!isSelecting) return;
+            
+            const cell = e.target;
+            if (cell.classList.contains('cell')) {
+                if (!selectedCells.includes(cell)) {
+                    toggleCellSelection(cell);
+                }
+                updateSelectionIndicator();
+            }
+        }
+        
+        function continueSelectionTouch(e) {
+            if (!isSelecting) return;
+            e.preventDefault();
+            
+            const touch = e.touches[0];
+            const cell = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (cell && cell.classList.contains('cell') && !selectedCells.includes(cell)) {
+                toggleCellSelection(cell);
+                updateSelectionIndicator();
+            }
+        }
+        
+        function endSelection() {
+            if (!isSelecting) return;
+            isSelecting = false;
+            
+            checkSelectedWord();
+            selectionIndicator.style.display = 'none';
+        }
+        
+        function toggleCellSelection(cell) {
+            cell.classList.add('selected');
+            if (!selectedCells.includes(cell)) {
+                selectedCells.push(cell);
+            }
+        }
+        
+        function clearSelection() {
+            selectedCells.forEach(cell => {
+                cell.classList.remove('selected');
+            });
+            selectedCells = [];
+            startCell = null;
+        }
+        
+        function updateSelectionIndicator() {
+            if (selectedCells.length === 0) {
+                selectionIndicator.style.display = 'none';
+                return;
+            }
+            
+            // Calcular a área de seleção
+            let minRow = rows, maxRow = 0;
+            let minCol = cols, maxCol = 0;
+            
+            selectedCells.forEach(cell => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                
+                minRow = Math.min(minRow, row);
+                maxRow = Math.max(maxRow, row);
+                minCol = Math.min(minCol, col);
+                maxCol = Math.max(maxCol, col);
+            });
+            
+            // Posicionar e dimensionar o indicador
+            const cellSize = 28;
+            const gap = 1;
+            
+            selectionIndicator.style.display = 'block';
+            selectionIndicator.style.left = `${minCol * (cellSize + gap)}px`;
+            selectionIndicator.style.top = `${minRow * (cellSize + gap)}px`;
+            selectionIndicator.style.width = `${(maxCol - minCol + 1) * (cellSize + gap) - gap}px`;
+            selectionIndicator.style.height = `${(maxRow - minRow + 1) * (cellSize + gap) - gap}px`;
+        }
+        
+        // Verificar se as células selecionadas formam uma palavra
+        function checkSelectedWord() {
+            if (selectedCells.length < 2) {
+                clearSelection();
+                return;
+            }
+            
+            // Obter a palavra das células selecionadas
+            const word = selectedCells.map(cell => cell.textContent).join('');
+            const reversedWord = word.split('').reverse().join('');
+            
+            // Verificar se a palavra ou sua reversa estão na lista
+            if (words.includes(word) && !foundWords.includes(word)) {
+                foundWords.push(word);
+                markWordAsFound(word);
+            } else if (words.includes(reversedWord) && !foundWords.includes(reversedWord)) {
+                foundWords.push(reversedWord);
+                markWordAsFound(reversedWord);
+            }
+            
+            clearSelection();
+            
+            // Verificar se todas as palavras foram encontradas
+            if (foundWords.length === words.length) {
+                document.getElementById('status').textContent = 'Parabéns! Você encontrou todas as palavras!';
+                document.getElementById('status').style.color = 'green';
+            }
+        }
+        
+        // Marcar palavra como encontrada
+        function markWordAsFound(word) {
+            // Marcar a palavra na lista
+            const wordElements = document.querySelectorAll('.simple-word-item');
+            for (const element of wordElements) {
+                if (element.dataset.word === word) {
+                    element.classList.add('found');
+                    break;
+                }
+            }
+            
+            // Destacar as células no grid
+            for (const cell of selectedCells) {
+                cell.classList.add('found');
+                cell.classList.remove('selected');
+            }
+        }
+        
+        // Gerar os caminhos de solução (efeito de marca-texto)
         function generateSolutionPaths() {
             const solutionPaths = document.getElementById('solutionPaths');
             solutionPaths.innerHTML = '';
@@ -805,6 +1196,7 @@
                 const positions = placements[word];
                 if (!positions || positions.length === 0) continue;
                 
+                // Calcular as coordenadas para o caminho
                 const firstPos = positions[0];
                 let minRow = firstPos[0], maxRow = firstPos[0];
                 let minCol = firstPos[1], maxCol = firstPos[1];
@@ -816,17 +1208,23 @@
                     maxCol = Math.max(maxCol, c);
                 }
                 
+                // Calcular dimensões do retângulo de destaque
                 const width = (maxCol - minCol + 1) * (cellSize + gap) - gap;
                 const height = (maxRow - minRow + 1) * (cellSize + gap) - gap;
+                
+                // Calcular posição do retângulo
                 const left = minCol * (cellSize + gap);
                 const top = minRow * (cellSize + gap);
                 
+                // Criar elemento de destaque
                 const highlight = document.createElement('div');
                 highlight.className = 'solution-path';
                 highlight.style.width = `${width}px`;
                 highlight.style.height = `${height}px`;
                 highlight.style.left = `${left}px`;
                 highlight.style.top = `${top}px`;
+                
+                // Usar cores diferentes para cada palavra (estilo PDF)
                 highlight.style.backgroundColor = highlightColors[colorIndex % highlightColors.length];
                 colorIndex++;
                 
@@ -834,11 +1232,13 @@
             }
         }
         
+        // Alterar o estilo de destaque
         function changeHighlightStyle() {
             const style = document.getElementById('highlightStyle').value;
             const solutionPaths = document.getElementById('solutionPaths');
             const solutionCells = document.querySelectorAll('#solutionGrid .solution-cell');
             
+            // Resetar todos os estilos de destaque
             solutionCells.forEach(cell => {
                 cell.classList.remove('highlighted');
                 cell.style.backgroundColor = '';
@@ -848,6 +1248,8 @@
 
             if (style === 'text') {
                 solutionPaths.style.display = 'none';
+                
+                // Destacar apenas o texto
                 for (const word of Object.keys(placements)) {
                     for (const [r, c] of placements[word]) {
                         const index = r * cols + c;
@@ -859,11 +1261,15 @@
                 }
             } else if (style === 'marker') {
                 solutionPaths.style.display = 'block';
+                // Apenas a linha contínua é exibida
             } else if (style === 'pdf') {
                 solutionPaths.style.display = 'none';
+                
+                // Destacar cada palavra com uma cor diferente (estilo PDF)
                 colorIndex = 0;
                 for (const word of Object.keys(placements)) {
                     const color = highlightColors[colorIndex % highlightColors.length];
+                    
                     for (const [r, c] of placements[word]) {
                         const index = r * cols + c;
                         if (solutionCells[index]) {
@@ -872,20 +1278,24 @@
                             solutionCells[index].style.fontWeight = 'bold';
                         }
                     }
+                    
                     colorIndex++;
                 }
             }
         }
         
+        // Mostrar soluções
         function showSolutions() {
             document.getElementById('solutions').style.display = 'block';
-            changeHighlightStyle();
+            changeHighlightStyle(); // Aplicar o estilo selecionado
         }
         
+        // Ocultar soluções
         function hideSolutions() {
             document.getElementById('solutions').style.display = 'none';
         }
         
+        // Gerar o grid quando a página carregar
         window.onload = function() {
             generateGrid();
         };
